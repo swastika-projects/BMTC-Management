@@ -6,7 +6,7 @@ using namespace std;
 #define FARE 5
 #define MIN_BAL 50
 #define MAX_LOAD 5
-
+#define MAXX 100
 
 class RFID{
 public:
@@ -19,6 +19,7 @@ public:
         RFID_no = n;
         bal = b;
         source = s;
+        dest=0;
     }
     void updateDest(int d){
         dest = d;
@@ -32,11 +33,12 @@ public:
 class person{
 public:
     string name, phone;
+    string names[4] = {"MICHAEL SCOTT","DWIGHT SCHRUTE","JIM HALPERT","KEVIN MALONE"};
 
     RFID card;
     person() {}
-    person(string nm, string p, int n, float b, int s){
-        name = nm;
+    person(string p, int n, float b, int s){
+        name = names[rand()%4];
         phone = p;
         //card(n,b,s);
         card.RFID_no=n;
@@ -50,9 +52,14 @@ public:
     }
 } ;
 
+
+//GLOBAL PERSON ARRAY
+person personArr[MAXX];
+
 class bus{
 public:
    static int load;
+   int prev_load=0;
    int bus_no, license = 45632;
    int src, dst;
    int path[5] = {1,2,3,4,5};
@@ -69,17 +76,24 @@ public:
    }*/
    void ctor(int l, int bn, int s, int d, int crr){
        load =l;
+       prev_load=load;
        bus_no = bn;
        src = s;
        dst = d;
        currentStop = crr;
    }
    void updateLoad(int en, int ex){
+       prev_load=load;
        load = load - ex + en;
        cout << "TOTAL PASSENGERS : "<< load << endl;
    }
    int overloadCheck(){
-       return load <= MAX_LOAD ? 1 : 0;
+       int flag = 1;
+       if(load>MAX_LOAD){
+            flag=0;
+            load=prev_load;
+       }
+       return flag;
    }
    int RFID_Scan();
    void updateStatus(int);
@@ -92,13 +106,18 @@ int bus :: RFID_Scan(){
 
     int rfid;
     float b;
-    cout << "RFID : ";
+    cout << "\nRFID : ";
     cin >> rfid;
     cout << "BAL : ";
     cin >> b;
 
-    person p("ALICE","987654987",rfid, b, currentStop);
-    //RFID r = new RFID(rfid, b, currentStop);
+    person p("987654987",rfid, b, currentStop);
+
+    personArr[rfid] = p;
+
+    //UPDATING SOURCE ON THE CARD
+    //personArr[rfid].card.source=currentStop;
+
     if(p.minBalCheck()){
         passengers[rfid] = b;
         return 1;
@@ -120,20 +139,32 @@ void bus :: updateStatus(int crr) {
     updateLoad(enter, exit);
 
     if(exit!=0){
-        cout << "\n................CHOOSE RFID TO EXIT...................\n";
+        cout << "\n\t\t\t\t\tCHOOSE RFID TO EXIT\n";
+        cout << "\t\t\t\t\t____________________\n";
         map<int, int>::iterator itr;
         for(itr = passengers.begin(); itr!= passengers.end(); itr++){
-            cout << itr->first << endl;
+            cout << itr->first << "  ";
         }
+
+        cout << endl;
+
         for(int i=0;i<exit;i++){
             int temp;
             cin >> temp;
             passengers.erase(temp);
+            personArr[temp].card.dest=currentStop;
+            personArr[temp].card.updateBal();
+            cout << "\n\t\t\t\t| -----------------------------|\n";
+            cout << "\t\t\t\t  NAME : "<< personArr[temp].name << endl;
+            cout << "\t\t\t\t  RFID NO : " << personArr[temp].card.RFID_no << endl;
+            cout << "\t\t\t\t  REMAINING BALANCE : " << personArr[temp].card.bal << endl;
+            cout << "\t\t\t\t| -----------------------------|\n" << endl;
         }
     }
 
     if(overloadCheck()){
-        cout << "\n................ENTERING PASSENGER'S DETAILS...................\n";
+        cout << "\n\t\t\t\t\tENTERING PASSENGER'S DETAILS\n";
+        cout << "\t\t\t\t\t_____________________________\n";
         for(int i=0;i<enter;i++){
             int chk = RFID_Scan();
             if(!chk){
@@ -142,7 +173,8 @@ void bus :: updateStatus(int crr) {
         }
     }
     else{
-        cout << "\nXXXXXXXXXXXXXXXXXX OVERLOAD!!! XXXXXXXXXXXXXXXXXXX\n";
+
+        cout << "\n\t\t\tXXXXXXXXXXXXXXXXXX OVERLOAD!!! XXXXXXXXXXXXXXXXXXX\n\n";
         cout << "ENTER NO OF PASSENGERS AGAIN : ";
         cin >> enter;
         updateLoad(enter, exit);
@@ -156,19 +188,22 @@ void bus :: updateStatus(int crr) {
 }
 
 
+
 int main(){
 
     int busNo,ld = 0;
     int flag = 0;
     int curr = 1;
 
-    cout << "----------------------WELCOME------------------------\n";
+    cout << "\n\t\t\t\t----------------------WELCOME------------------------\n\n";
     cout << "ENTER THE BUS NO : ";
     bus b;
     cin >> busNo;
-    cout << "THIS BUS STARTS FROM SOURCE : 1 TO DESTINATION : 5\nLICENSE NO : " << b.license << "\nBUS NUMBER : " << busNo << endl;
+    cout << "\n---------------------------------------------------\n";
+    cout << "THIS BUS STARTS FROM SOURCE : 1 TO DESTINATION : 5\nLICENSE NO : " << b.license << "\nBUS NUMBER : " << busNo;
+    cout << "\n---------------------------------------------------\n";
 
-    cout << "PRESS 0 TO START THE BUS\n";
+    cout << "\nPRESS 0 TO START THE BUS\n";
     cin >> flag;
     // cout << "ENTER NO OF INCOMING PASSENGERS : ";
     // cin >> ld;
@@ -190,7 +225,7 @@ int main(){
     //     }
     // }
     for(int i=1;i<=5;i++){
-        cout << "..............BUS STOP NO : " << i << "..............." << endl;
+        cout << "\n--------------------------------BUS STOP NO : " << i << "-----------------------------------------\n" << endl;
         if(i==1){
             //cout << "ENTER NO OF INCOMING PASSENGERS : ";
             //cin >> ld;
@@ -208,10 +243,11 @@ int main(){
             b.updateStatus(i);
         }
         cout << "\nBUS STARTS SOON. PRESS 1 TO STOP AT EVERY STOP\n";
-        cout << "\n\n......BUS IS MOVING.......\n\n";
+        cout << "\n\n--------------------------------BUS IS MOVING--------------------------------------------\n\n";
         cin >> flag;
 
     }
 
     return 0;
 }
+
